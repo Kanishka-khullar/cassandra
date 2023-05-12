@@ -45,7 +45,8 @@ public class CompressorTest
             DeflateCompressor.create(Collections.<String, String>emptyMap()),
             SnappyCompressor.create(Collections.<String, String>emptyMap()),
             ZstdCompressor.create(Collections.emptyMap()),
-            NoopCompressor.create(Collections.emptyMap())
+            NoopCompressor.create(Collections.emptyMap()),
+            QPLCompressor.create(Collections.emptyMap())
     };
 
     @Test
