@@ -29,6 +29,7 @@ import org.apache.cassandra.config.DatabaseDescriptor;
 import org.apache.cassandra.db.Directories;
 import org.apache.cassandra.io.sstable.format.SSTableFormat;
 import org.apache.cassandra.io.sstable.format.SSTableFormat.Components;
+import org.apache.cassandra.io.sstable.format.Version;
 import org.apache.cassandra.io.util.File;
 import org.apache.cassandra.io.util.FileUtils;
 import org.apache.cassandra.utils.ByteBufferUtil;
@@ -86,12 +87,12 @@ public class DescriptorTest
 
     private void testFromFilenameFor(File dir)
     {
-        checkFromFilename(new Descriptor(dir, ksname, cfname, new SequenceBasedSSTableId(1), SSTableFormat.Type.current()));
+        checkFromFilename(new Descriptor(dir, ksname, cfname, new SequenceBasedSSTableId(1), DatabaseDescriptor.getSelectedSSTableFormat()));
 
         // secondary index
         String idxName = "myidx";
         File idxDir = new File(dir.absolutePath() + File.pathSeparator() + Directories.SECONDARY_INDEX_NAME_SEPARATOR + idxName);
-        checkFromFilename(new Descriptor(idxDir, ksname, cfname + Directories.SECONDARY_INDEX_NAME_SEPARATOR + idxName, new SequenceBasedSSTableId(4), SSTableFormat.Type.current()));
+        checkFromFilename(new Descriptor(idxDir, ksname, cfname + Directories.SECONDARY_INDEX_NAME_SEPARATOR + idxName, new SequenceBasedSSTableId(4), DatabaseDescriptor.getSelectedSSTableFormat()));
     }
 
     private void checkFromFilename(Descriptor original)
@@ -114,8 +115,8 @@ public class DescriptorTest
     {
         // Descriptor should be equal when parent directory points to the same directory
         File dir = new File(".");
-        Descriptor desc1 = new Descriptor(dir, "ks", "cf", new SequenceBasedSSTableId(1), SSTableFormat.Type.current());
-        Descriptor desc2 = new Descriptor(dir.toAbsolute(), "ks", "cf", new SequenceBasedSSTableId(1), SSTableFormat.Type.current());
+        Descriptor desc1 = new Descriptor(dir, "ks", "cf", new SequenceBasedSSTableId(1), DatabaseDescriptor.getSelectedSSTableFormat());
+        Descriptor desc2 = new Descriptor(dir.toAbsolute(), "ks", "cf", new SequenceBasedSSTableId(1), DatabaseDescriptor.getSelectedSSTableFormat());
         assertEquals(desc1, desc2);
         assertEquals(desc1.hashCode(), desc2.hashCode());
     }
@@ -123,10 +124,12 @@ public class DescriptorTest
     @Test
     public void validateNames()
     {
-        String name = SSTableFormat.Type.current().name;
-        String[] fileNames = { "ma-1-" + name + "-Data.db",
+        final SSTableFormat<?, ?> ssTableFormat = DatabaseDescriptor.getSelectedSSTableFormat();
+        String name = ssTableFormat.name();
+        final Version version = ssTableFormat.getLatestVersion();
+        String[] fileNames = { version + "-1-" + name + "-Data.db",
                                // 2ndary index
-                               ".idx1" + File.pathSeparator() + "ma-1-" + name + "-Data.db",
+                               ".idx1" + File.pathSeparator() + version + "-1-" + name + "-Data.db",
                                };
 
         for (String fileName : fileNames)
@@ -249,42 +252,42 @@ public class DescriptorTest
         testKeyspaceTableParsing(filePathsWithBackupsKeyspaceAndTableWithIndices, "backups", "backups.index");
 
         String[] outsideOfCassandra = new String[]{
-        "/tmp/some/path/tests/keyspace/table-34234234234234234234234234234234/na-1-big-Index.db",
-        "/tmp/some/path/tests/keyspace/table-34234234234234234234234234234234/snapshots/snapshots/na-1-big-Index.db",
-        "/tmp/some/path/tests/keyspace/table-34234234234234234234234234234234/backups/na-1-big-Index.db",
-        "/tmp/tests/keyspace/table-34234234234234234234234234234234/na-1-big-Index.db",
+        "/testroot/some/path/tests/keyspace/table-34234234234234234234234234234234/na-1-big-Index.db",
+        "/testroot/some/path/tests/keyspace/table-34234234234234234234234234234234/snapshots/snapshots/na-1-big-Index.db",
+        "/testroot/some/path/tests/keyspace/table-34234234234234234234234234234234/backups/na-1-big-Index.db",
+        "/testroot/tests/keyspace/table-34234234234234234234234234234234/na-1-big-Index.db",
         "/keyspace/table-34234234234234234234234234234234/nb-3g1m_0nuf_3vj5m2k1125165rxa7-big-Index.db",
-        "/tmp/some/path/tests/keyspace/table-34234234234234234234234234234234/nb-3g1m_0nuf_3vj5m2k1125165rxa7-big-Index.db",
-        "/tmp/some/path/tests/keyspace/table-34234234234234234234234234234234/snapshots/snapshots/nb-3g1m_0nuf_3vj5m2k1125165rxa7-big-Index.db",
-        "/tmp/some/path/tests/keyspace/table-34234234234234234234234234234234/backups/nb-3g1m_0nuf_3vj5m2k1125165rxa7-big-Index.db",
-        "/tmp/tests/keyspace/table-34234234234234234234234234234234/nb-3g1m_0nuf_3vj5m2k1125165rxa7-big-Index.db",
+        "/testroot/some/path/tests/keyspace/table-34234234234234234234234234234234/nb-3g1m_0nuf_3vj5m2k1125165rxa7-big-Index.db",
+        "/testroot/some/path/tests/keyspace/table-34234234234234234234234234234234/snapshots/snapshots/nb-3g1m_0nuf_3vj5m2k1125165rxa7-big-Index.db",
+        "/testroot/some/path/tests/keyspace/table-34234234234234234234234234234234/backups/nb-3g1m_0nuf_3vj5m2k1125165rxa7-big-Index.db",
+        "/testroot/tests/keyspace/table-34234234234234234234234234234234/nb-3g1m_0nuf_3vj5m2k1125165rxa7-big-Index.db",
         "/keyspace/table-34234234234234234234234234234234/nb-3g1m_0nuf_3vj5m2k1125165rxa7-big-Index.db"
         };
 
         testKeyspaceTableParsing(outsideOfCassandra, "keyspace", "table");
 
         String[] outsideOfCassandraUppercaseKeyspaceAndTable = new String[]{
-        "/tmp/some/path/tests/Keyspace/Table-34234234234234234234234234234234/na-1-big-Index.db",
-        "/tmp/some/path/tests/Keyspace/Table-34234234234234234234234234234234/snapshots/snapshots/na-1-big-Index.db",
-        "/tmp/some/path/tests/Keyspace/Table-34234234234234234234234234234234/backups/na-1-big-Index.db",
-        "/tmp/tests/Keyspace/Table-34234234234234234234234234234234/na-1-big-Index.db",
+        "/testroot/some/path/tests/Keyspace/Table-34234234234234234234234234234234/na-1-big-Index.db",
+        "/testroot/some/path/tests/Keyspace/Table-34234234234234234234234234234234/snapshots/snapshots/na-1-big-Index.db",
+        "/testroot/some/path/tests/Keyspace/Table-34234234234234234234234234234234/backups/na-1-big-Index.db",
+        "/testroot/tests/Keyspace/Table-34234234234234234234234234234234/na-1-big-Index.db",
         "/Keyspace/Table-34234234234234234234234234234234/nb-3g1m_0nuf_3vj5m2k1125165rxa7-big-Index.db",
-        "/tmp/some/path/tests/Keyspace/Table-34234234234234234234234234234234/nb-3g1m_0nuf_3vj5m2k1125165rxa7-big-Index.db",
-        "/tmp/some/path/tests/Keyspace/Table-34234234234234234234234234234234/snapshots/snapshots/nb-3g1m_0nuf_3vj5m2k1125165rxa7-big-Index.db",
-        "/tmp/some/path/tests/Keyspace/Table-34234234234234234234234234234234/backups/nb-3g1m_0nuf_3vj5m2k1125165rxa7-big-Index.db",
-        "/tmp/tests/Keyspace/Table-34234234234234234234234234234234/nb-3g1m_0nuf_3vj5m2k1125165rxa7-big-Index.db",
+        "/testroot/some/path/tests/Keyspace/Table-34234234234234234234234234234234/nb-3g1m_0nuf_3vj5m2k1125165rxa7-big-Index.db",
+        "/testroot/some/path/tests/Keyspace/Table-34234234234234234234234234234234/snapshots/snapshots/nb-3g1m_0nuf_3vj5m2k1125165rxa7-big-Index.db",
+        "/testroot/some/path/tests/Keyspace/Table-34234234234234234234234234234234/backups/nb-3g1m_0nuf_3vj5m2k1125165rxa7-big-Index.db",
+        "/testroot/tests/Keyspace/Table-34234234234234234234234234234234/nb-3g1m_0nuf_3vj5m2k1125165rxa7-big-Index.db",
         "/Keyspace/Table-34234234234234234234234234234234/nb-3g1m_0nuf_3vj5m2k1125165rxa7-big-Index.db"
         };
 
         testKeyspaceTableParsing(outsideOfCassandraUppercaseKeyspaceAndTable, "Keyspace", "Table");
 
         String[] outsideOfCassandraIndexes = new String[]{
-        "/tmp/some/path/tests/keyspace/table-34234234234234234234234234234234/.index/na-1-big-Index.db",
-        "/tmp/some/path/tests/keyspace/table-34234234234234234234234234234234/snapshots/snapshots/.index/na-1-big-Index.db",
-        "/tmp/some/path/tests/keyspace/table-34234234234234234234234234234234/backups/.index/na-1-big-Index.db",
-        "/tmp/some/path/tests/keyspace/table-34234234234234234234234234234234/.index/nb-3g1m_0nuf_3vj5m2k1125165rxa7-big-Index.db",
-        "/tmp/some/path/tests/keyspace/table-34234234234234234234234234234234/snapshots/snapshots/.index/nb-3g1m_0nuf_3vj5m2k1125165rxa7-big-Index.db",
-        "/tmp/some/path/tests/keyspace/table-34234234234234234234234234234234/backups/.index/nb-3g1m_0nuf_3vj5m2k1125165rxa7-big-Index.db"
+        "/testroot/some/path/tests/keyspace/table-34234234234234234234234234234234/.index/na-1-big-Index.db",
+        "/testroot/some/path/tests/keyspace/table-34234234234234234234234234234234/snapshots/snapshots/.index/na-1-big-Index.db",
+        "/testroot/some/path/tests/keyspace/table-34234234234234234234234234234234/backups/.index/na-1-big-Index.db",
+        "/testroot/some/path/tests/keyspace/table-34234234234234234234234234234234/.index/nb-3g1m_0nuf_3vj5m2k1125165rxa7-big-Index.db",
+        "/testroot/some/path/tests/keyspace/table-34234234234234234234234234234234/snapshots/snapshots/.index/nb-3g1m_0nuf_3vj5m2k1125165rxa7-big-Index.db",
+        "/testroot/some/path/tests/keyspace/table-34234234234234234234234234234234/backups/.index/nb-3g1m_0nuf_3vj5m2k1125165rxa7-big-Index.db"
         };
 
         testKeyspaceTableParsing(outsideOfCassandraIndexes, "keyspace", "table.index");

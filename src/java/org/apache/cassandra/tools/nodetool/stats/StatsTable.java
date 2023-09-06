@@ -44,6 +44,7 @@ public class StatsTable
     public boolean memtableOffHeapUsed = false;
     public String memtableOffHeapMemoryUsed;
     public Object memtableSwitchCount;
+    public Object speculativeRetries;
     public long localReadCount;
     public double localReadLatencyMs;
     public long localWriteCount;
@@ -69,7 +70,6 @@ public class StatsTable
     public long maximumLiveCellsPerSliceLastFiveMinutes;
     public double averageTombstonesPerSliceLastFiveMinutes;
     public long maximumTombstonesPerSliceLastFiveMinutes;
-    public String droppedMutations;
     public List<String> sstablesInEachLevel = new ArrayList<>();
     public List<String> sstableBytesInEachLevel = new ArrayList<>();
     public int[] sstableCountPerTWCSBucket = null;

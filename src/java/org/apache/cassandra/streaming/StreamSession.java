@@ -75,6 +75,7 @@ import org.apache.cassandra.utils.TimeUUID;
 import org.apache.cassandra.utils.concurrent.FutureCombiner;
 
 import static com.google.common.collect.Iterables.all;
+import static org.apache.cassandra.config.CassandraRelevantProperties.CASSANDRA_STREAMING_DEBUG_STACKTRACE_LIMIT;
 import static org.apache.cassandra.utils.Clock.Global.nanoTime;
 import static org.apache.cassandra.locator.InetAddressAndPort.hostAddressAndPort;
 import static org.apache.cassandra.utils.FBUtilities.getBroadcastAddressAndPort;
@@ -157,7 +158,7 @@ import static org.apache.cassandra.utils.FBUtilities.getBroadcastAddressAndPort;
 public class StreamSession
 {
     private static final Logger logger = LoggerFactory.getLogger(StreamSession.class);
-    private static final int DEBUG_STACKTRACE_LIMIT = Integer.parseInt(System.getProperty("cassandra.streaming.debug_stacktrace_limit", "2"));
+    private static final int DEBUG_STACKTRACE_LIMIT = CASSANDRA_STREAMING_DEBUG_STACKTRACE_LIMIT.getInt();
 
     public enum PrepareDirection { SEND, ACK }
 
@@ -200,6 +201,7 @@ public class StreamSession
     // receiving peer's CompleteMessage.
     private boolean maybeCompleted = false;
     private Future<?> closeFuture;
+    private final Object closeFutureLock = new Object();
 
     private final TimeUUID pendingRepair;
     private final PreviewKind previewKind;
@@ -522,37 +524,45 @@ public class StreamSession
         return closeSession(finalState, null);
     }
 
-    private synchronized Future<?> closeSession(State finalState, String failureReason)
+    private Future<?> closeSession(State finalState, String failureReason)
     {
-        // it's session is already closed
-        if (closeFuture != null)
-            return closeFuture;
-
-        state(finalState);
-        //this refers to StreamInfo
-        this.failureReason = failureReason;
-
-        List<Future<?>> futures = new ArrayList<>();
-
-        // ensure aborting the tasks do not happen on the network IO thread (read: netty event loop)
-        // as we don't want any blocking disk IO to stop the network thread
-        if (finalState == State.FAILED || finalState == State.ABORTED)
-            futures.add(ScheduledExecutors.nonPeriodicTasks.submit(this::abortTasks));
-
-        // Channels should only be closed by the initiator; but, if this session closed
-        // due to failure, channels should be always closed regardless, even if this is not the initator.
-        if (!isFollower || state != State.COMPLETE)
+        // Keep a separate lock on the closeFuture so that we create it once and only once.
+        // Cannot use the StreamSession monitor here as StreamDeserializingTask/StreamSession.messageReceived
+        // holds it while calling syncUninterruptibly on sendMessage which can trigger a closeSession in
+        // the Netty event loop on error and cause a deadlock.
+        synchronized (closeFutureLock)
         {
-            logger.debug("[Stream #{}] Will close attached inbound {} and outbound {} channels", planId(), inbound, outbound);
-            inbound.values().forEach(channel -> futures.add(channel.close()));
-            outbound.values().forEach(channel -> futures.add(channel.close()));
+            if (closeFuture != null)
+                return closeFuture;
+
+            closeFuture = ScheduledExecutors.nonPeriodicTasks.submit(() -> {
+                synchronized (this) {
+                    state(finalState);
+                    //this refers to StreamInfo
+                    this.failureReason = failureReason;
+
+                    sink.onClose(peer);
+                    streamResult.handleSessionComplete(this);
+                }}).flatMap(ignore -> {
+                    List<Future<?>> futures = new ArrayList<>();
+                    // ensure aborting the tasks do not happen on the network IO thread (read: netty event loop)
+                    // as we don't want any blocking disk IO to stop the network thread
+                    if (finalState == State.FAILED || finalState == State.ABORTED)
+                        futures.add(ScheduledExecutors.nonPeriodicTasks.submit(this::abortTasks));
+
+                    // Channels should only be closed by the initiator; but, if this session closed
+                    // due to failure, channels should be always closed regardless, even if this is not the initator.
+                    if (!isFollower || state != State.COMPLETE)
+                    {
+                        logger.debug("[Stream #{}] Will close attached inbound {} and outbound {} channels", planId(), inbound, outbound);
+                        inbound.values().forEach(channel -> futures.add(channel.close()));
+                        outbound.values().forEach(channel -> futures.add(channel.close()));
+                    }
+                    return FutureCombiner.allOf(futures);
+                });
+
+            return closeFuture;
         }
-
-        sink.onClose(peer);
-        streamResult.handleSessionComplete(this);
-        closeFuture = FutureCombiner.allOf(futures);
-
-        return closeFuture;
     }
 
     private void abortTasks()
@@ -880,7 +890,7 @@ public class StreamSession
             Set<FileStore> allWriteableFileStores = cfs.getDirectories().allFileStores(fileStoreMapper);
             if (allWriteableFileStores.isEmpty())
             {
-                logger.error("[Stream #{}] Could not get any writeable FileStores for {}.{}", planId, cfs.keyspace.getName(), cfs.getTableName());
+                logger.error("[Stream #{}] Could not get any writeable FileStores for {}.{}", planId, cfs.getKeyspaceName(), cfs.getTableName());
                 continue;
             }
             allFileStores.addAll(allWriteableFileStores);
@@ -905,7 +915,7 @@ public class StreamSession
                          newStreamBytesToWritePerFileStore,
                          perTableIdIncomingBytes.keySet().stream()
                                                 .map(ColumnFamilyStore::getIfExists).filter(Objects::nonNull)
-                                                .map(cfs -> cfs.keyspace.getName() + '.' + cfs.name)
+                                                .map(cfs -> cfs.getKeyspaceName() + '.' + cfs.name)
                                                 .collect(Collectors.joining(",")),
                          totalStreamRemaining,
                          totalCompactionWriteRemaining,
@@ -942,7 +952,7 @@ public class StreamSession
                     tasksStreamed = csm.getEstimatedRemainingTasks(perTableIdIncomingFiles.get(tableId),
                                                                    perTableIdIncomingBytes.get(tableId),
                                                                    isForIncremental);
-                    tables.add(String.format("%s.%s", cfs.keyspace.getName(), cfs.name));
+                    tables.add(String.format("%s.%s", cfs.getKeyspaceName(), cfs.name));
                 }
                 pendingCompactionsBeforeStreaming += tasksOther;
                 pendingCompactionsAfterStreaming += tasksStreamed;
@@ -1160,7 +1170,8 @@ public class StreamSession
     {
         try
         {
-            state(State.WAIT_COMPLETE);
+            if (state != State.COMPLETE) // mark as waiting to complete while closeSession futures run.
+                state(State.WAIT_COMPLETE);
             closeSession(State.COMPLETE);
         }
         finally
@@ -1308,7 +1319,7 @@ public class StreamSession
             logger.debug("[Stream #{}] Stream session with peer {} is already in a final state on abort.", planId(), peer);
             return;
         }
-            
+
         logger.info("[Stream #{}] Aborting stream session with peer {}...", planId(), peer);
 
         if (channel.connected())

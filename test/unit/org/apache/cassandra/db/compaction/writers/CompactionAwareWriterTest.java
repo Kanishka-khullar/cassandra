@@ -17,7 +17,10 @@
  */
 package org.apache.cassandra.db.compaction.writers;
 
+import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -187,15 +190,17 @@ public class CompactionAwareWriterTest extends CQLTester
     }
 
     @Test
-    public void testMultiDatadirCheck()
+    public void testMultiDatadirCheck() throws IOException
     {
         createTable("create table %s (id int primary key)");
+        Path tmpDir = Files.createTempDirectory("testMultiDatadirCheck");
+
         Directories.DataDirectory [] dataDirs = new Directories.DataDirectory[] {
-        new MockDataDirectory(new File("/tmp/1")),
-        new MockDataDirectory(new File("/tmp/2")),
-        new MockDataDirectory(new File("/tmp/3")),
-        new MockDataDirectory(new File("/tmp/4")),
-        new MockDataDirectory(new File("/tmp/5"))
+        new MockDataDirectory(new File(tmpDir, "1")),
+        new MockDataDirectory(new File(tmpDir, "2")),
+        new MockDataDirectory(new File(tmpDir, "3")),
+        new MockDataDirectory(new File(tmpDir, "4")),
+        new MockDataDirectory(new File(tmpDir, "5"))
         };
         Set<SSTableReader> sstables = new HashSet<>();
         for (int i = 0; i < 100; i++)
@@ -225,7 +230,7 @@ public class CompactionAwareWriterTest extends CQLTester
     {
         assert txn.originals().size() == 1;
         int rowsWritten = 0;
-        int nowInSec = FBUtilities.nowInSeconds();
+        long nowInSec = FBUtilities.nowInSeconds();
         try (AbstractCompactionStrategy.ScannerList scanners = cfs.getCompactionStrategyManager().getScanners(txn.originals());
              CompactionController controller = new CompactionController(cfs, txn.originals(), cfs.gcBefore(nowInSec));
              CompactionIterator ci = new CompactionIterator(COMPACTION, scanners.scanners, controller, nowInSec, nextTimeUUID()))

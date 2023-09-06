@@ -1,16 +1,14 @@
 = cqlsh: the CQL shell
 
-`cqlsh` is a command-line interface for interacting with Cassandra using CQL (the Cassandra Query Language). 
+`cqlsh` is a command-line interface for interacting with Cassandra using CQL (the Cassandra Query Language).
 It is shipped with every Cassandra package, and can be found in the bin/ directory alongside the cassandra
-executable. 
+executable.
 `cqlsh` is implemented with the Python native protocol driver, and connects to the single specified node.
 
 == Compatibility
 
-`cqlsh` is compatible with Python 2.7.
-
 In general, a given version of `cqlsh` is only guaranteed to work with the
-version of Cassandra that it was released with. 
+version of Cassandra that it was released with.
 In some cases, `cqlsh` may work with older or newer versions of Cassandra, but this is not
 officially supported.
 
@@ -22,11 +20,11 @@ of `cqlsh`.
 
 === pytz
 
-By default, `cqlsh` displays all timestamps with a UTC timezone. 
-To support display of timestamps with another timezone, install
-the http://pytz.sourceforge.net/[pytz] library. 
-See the `timezone` option in xref:cql/tools/cqlsh.adoc#cqlshrc[cqlshrc] for specifying a timezone to
-use.
+By default, `cqlsh` displays all timestamps with a UTC timezone.
+For Python 3.9 or higher, timestamps can be displayed in different timezones by modifying the
+`timezone` option in xref:cassandra:developing/cql/tools/cqlsh.adoc#cqlshrc[cqlshrc] or by setting the environment
+variable `TZ`.
+Python 3.8 or lower, however, will also require the installation of http://pytz.sourceforge.net/[pytz] library.
 
 === cython
 
@@ -37,12 +35,12 @@ modules that are central to the performance of `COPY`.
 [[cqlshrc]]
 == cqlshrc
 
-The `cqlshrc` file holds configuration options for `cqlsh`. 
+The `cqlshrc` file holds configuration options for `cqlsh`.
 By default, the file is located the user's home directory at `~/.cassandra/cqlshrc`, but a
 custom location can be specified with the `--cqlshrc` option.
 
 Example config values and documentation can be found in the
-`conf/cqlshrc.sample` file of a tarball installation. 
+`conf/cqlshrc.sample` file of a tarball installation.
 You can also view the latest version of the
 https://github.com/apache/cassandra/blob/trunk/conf/cqlshrc.sample[cqlshrc file online].
 
@@ -265,6 +263,20 @@ Gives information about cqlsh commands. To see available topics, enter
 `HELP` without any arguments. To see help on a topic, use
 `HELP <topic>`. Also see the `--browser` argument for controlling what
 browser is used to display help.
+
+=== `HISTORY`
+
+Prints to the screen the last `n` cqlsh commands executed on the server.
+The number of lines defaults to 50 if not specified. `n` is set for
+the current CQL session so if you set it e.g. to `10`, from that point
+there will be at most 10 last commands returned to you.
+
+`Usage`:
+
+[source,none]
+----
+HISTORY <n>
+----
 
 === `TRACING`
 

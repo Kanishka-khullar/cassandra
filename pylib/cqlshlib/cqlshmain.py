@@ -17,9 +17,8 @@
 import cmd
 import codecs
 import configparser
-import csv
 import getpass
-import optparse
+import argparse
 import os
 import re
 import subprocess
@@ -30,6 +29,8 @@ import webbrowser
 from contextlib import contextmanager
 from io import StringIO
 from uuid import UUID
+
+from cqlshlib.helptopics import get_html_anchor, get_html_topics
 
 UTF8 = 'utf-8'
 
@@ -80,9 +81,8 @@ from cqlshlib.formatting import (DEFAULT_DATE_FORMAT, DEFAULT_NANOTIME_FORMAT,
                                  DEFAULT_TIMESTAMP_FORMAT, CqlType, DateTimeFormat,
                                  format_by_type)
 from cqlshlib.tracing import print_trace, print_trace_session
-from cqlshlib.util import get_file_encoding_bomsize
-from cqlshlib.util import is_file_secure
-
+from cqlshlib.util import get_file_encoding_bomsize, is_file_secure
+from cqlshlib.serverversion import version as build_version
 
 DEFAULT_HOST = '127.0.0.1'
 DEFAULT_PORT = 9042
@@ -108,56 +108,56 @@ defaults can be changed by setting $CQLSH_HOST and/or $CQLSH_PORT. When a
 host (and optional port number) are given on the command line, they take
 precedence over any defaults.""" % globals()
 
-parser = optparse.OptionParser(description=description, epilog=epilog,
-                               usage="Usage: %prog [options] [host [port]]",
-                               version='cqlsh ' + version)
-parser.add_option("-C", "--color", action='store_true', dest='color',
-                  help='Always use color output')
-parser.add_option("--no-color", action='store_false', dest='color',
-                  help='Never use color output')
-parser.add_option("--browser", dest='browser', help="""The browser to use to display CQL help, where BROWSER can be:
-                                                    - one of the supported browsers in https://docs.python.org/3/library/webbrowser.html.
-                                                    - browser path followed by %s, example: /usr/bin/google-chrome-stable %s""")
-parser.add_option('--ssl', action='store_true', help='Use SSL', default=False)
-parser.add_option("-u", "--username", help="Authenticate as user.")
-parser.add_option("-p", "--password", help="Authenticate using password.")
-parser.add_option('-k', '--keyspace', help='Authenticate to the given keyspace.')
-parser.add_option("-f", "--file", help="Execute commands from FILE, then exit")
-parser.add_option('--debug', action='store_true',
-                  help='Show additional debugging information')
-parser.add_option('--coverage', action='store_true',
-                  help='Collect coverage data')
-parser.add_option("--encoding", help="Specify a non-default encoding for output."
-                  + " (Default: %s)" % (UTF8,))
-parser.add_option("--cqlshrc", help="Specify an alternative cqlshrc file location.")
-parser.add_option("--credentials", help="Specify an alternative credentials file location.")
-parser.add_option('--cqlversion', default=None,
-                  help='Specify a particular CQL version, '
-                       'by default the highest version supported by the server will be used.'
-                       ' Examples: "3.0.3", "3.1.0"')
-parser.add_option("--protocol-version", type="int", default=None,
-                  help='Specify a specific protcol version otherwise the client will default and downgrade as necessary')
 
-parser.add_option("-e", "--execute", help='Execute the statement and quit.')
-parser.add_option("--connect-timeout", default=DEFAULT_CONNECT_TIMEOUT_SECONDS, dest='connect_timeout',
-                  help='Specify the connection timeout in seconds (default: %default seconds).')
-parser.add_option("--request-timeout", default=DEFAULT_REQUEST_TIMEOUT_SECONDS, dest='request_timeout',
-                  help='Specify the default request timeout in seconds (default: %default seconds).')
-parser.add_option("-t", "--tty", action='store_true', dest='tty',
-                  help='Force tty mode (command prompt).')
-parser.add_option('-v', action="version", help='Print the current version of cqlsh.')
+parser = argparse.ArgumentParser(description=description, epilog=epilog,
+                                 usage="Usage: %(prog)s [options] [host [port]]",
+                                 prog='cqlsh')
+parser.add_argument('-v', '--version', action='version', version='cqlsh ' + version)
+parser.add_argument("-C", "--color", action='store_true', dest='color',
+                                            help='Always use color output')
+parser.add_argument("--no-color", action='store_false', dest='color', help='Never use color output')
+parser.add_argument("--browser", dest='browser', help="""The browser to use to display CQL help, where BROWSER can be:
+                                                    - one of the supported browsers in https://docs.python.org/3/library/webbrowser.html.
+                                                    - browser path followed by %%s, example: /usr/bin/google-chrome-stable %%s""")
+
+parser.add_argument('--ssl', action='store_true', help='Use SSL', default=False)
+parser.add_argument("-u", "--username", help="Authenticate as user.")
+parser.add_argument("-p", "--password", help="Authenticate using password.")
+parser.add_argument('-k', '--keyspace', help='Authenticate to the given keyspace.')
+parser.add_argument("-f", "--file", help="Execute commands from FILE, then exit")
+parser.add_argument('--debug', action='store_true',
+                    help='Show additional debugging information')
+parser.add_argument('--coverage', action='store_true',
+                    help='Collect coverage data')
+parser.add_argument("--encoding", help="Specify a non-default encoding for output."
+                    + " (Default: %s)" % (UTF8,))
+parser.add_argument("--cqlshrc", help="Specify an alternative cqlshrc file location.")
+parser.add_argument("--credentials", help="Specify an alternative credentials file location.")
+parser.add_argument('--cqlversion', default=None,
+                    help='Specify a particular CQL version, '
+                    'by default the highest version supported by the server will be used.'
+                    ' Examples: "3.0.3", "3.1.0"')
+parser.add_argument("--protocol-version", type=int, default=None,
+                    help='Specify a specific protcol version otherwise the client will default and downgrade as necessary')
+
+parser.add_argument("-e", "--execute", help='Execute the statement and quit.')
+parser.add_argument("--connect-timeout", default=DEFAULT_CONNECT_TIMEOUT_SECONDS, dest='connect_timeout',
+                    help='Specify the connection timeout in seconds (default: %(default)s seconds).')
+parser.add_argument("--request-timeout", default=DEFAULT_REQUEST_TIMEOUT_SECONDS, dest='request_timeout',
+                    help='Specify the default request timeout in seconds (default: %(default)s seconds).')
+parser.add_argument("-t", "--tty", action='store_true', dest='tty',
+                    help='Force tty mode (command prompt).')
 
 # This is a hidden option to suppress the warning when the -p/--password command line option is used.
 # Power users may use this option if they know no other people has access to the system where cqlsh is run or don't care about security.
 # Use of this option in scripting is discouraged. Please use a (temporary) credentials file where possible.
 # The Cassandra distributed tests (dtests) also use this option in some tests when a well-known password is supplied via the command line.
-parser.add_option("--insecure-password-without-warning", action='store_true', dest='insecure_password_without_warning',
-                  help=optparse.SUPPRESS_HELP)
+parser.add_argument("--insecure-password-without-warning", action='store_true', dest='insecure_password_without_warning',
+                    help=argparse.SUPPRESS)
 
-# use cfoptions for config file
+# use cfarguments for config file
 
-opt_values = optparse.Values()
-(cfoptions, arguments) = parser.parse_args(sys.argv[1:], values=opt_values)
+cfarguments, args = parser.parse_known_args()
 
 # BEGIN history config
 
@@ -191,11 +191,10 @@ except OSError:
 
 # END history config
 
-
 DEFAULT_CQLSHRC = os.path.expanduser(os.path.join('~', '.cassandra', 'cqlshrc'))
 
-if hasattr(cfoptions, 'cqlshrc'):
-    CONFIG_FILE = os.path.expanduser(cfoptions.cqlshrc)
+if cfarguments.cqlshrc is not None:
+    CONFIG_FILE = os.path.expanduser(cfarguments.cqlshrc)
     if not os.path.exists(CONFIG_FILE):
         print('\nWarning: Specified cqlshrc location `%s` does not exist.  Using `%s` instead.\n' % (CONFIG_FILE, DEFAULT_CQLSHRC))
         CONFIG_FILE = DEFAULT_CQLSHRC
@@ -277,20 +276,8 @@ class DecodeError(Exception):
         return '<%s %s>' % (self.__class__.__name__, self.message())
 
 
-def maybe_ensure_text(val):
-    return str(val) if val else val
-
-
 class FormatError(DecodeError):
     verb = 'format'
-
-
-def full_cql_version(ver):
-    while ver.count('.') < 2:
-        ver += '.0'
-    ver_parts = ver.split('-', 1) + ['']
-    vertuple = tuple(list(map(int, ver_parts[0].split('.'))) + [ver_parts[1]])
-    return ver, vertuple
 
 
 def format_value(val, cqltype, encoding, addcolor=False, date_time_format=None,
@@ -412,7 +399,7 @@ class Shell(cmd.Cmd):
         self.session.row_factory = ordered_dict_factory
         self.session.default_consistency_level = cassandra.ConsistencyLevel.ONE
         self.get_connection_versions()
-        self.set_expanded_cql_version(self.connection_versions['cql'])
+        self.set_cql_version(self.connection_versions['cql'])
 
         self.current_keyspace = keyspace
 
@@ -432,6 +419,8 @@ class Shell(cmd.Cmd):
         if stdin is None:
             stdin = sys.stdin
 
+        self.check_build_versions()
+
         if tty:
             self.reset_prompt()
             self.report_connection()
@@ -448,17 +437,31 @@ class Shell(cmd.Cmd):
         self.single_statement = single_statement
         self.is_subshell = is_subshell
 
+        self.cql_version = None
+        self.cql_version_str = None
+
+        # configure length of history shown
+        self.max_history_length_shown = 50
+        self.lastcmd = ""
+
+    def check_build_versions(self):
+        baseversion = self.connection_versions['build']
+        extra = baseversion.rfind('-')
+        if extra != -1:
+            baseversion = baseversion[0:extra]
+        if baseversion != build_version:
+            print("WARNING: cqlsh was built against {}, but this server is {}.  All features may not work!".format(build_version, baseversion))
+
     @property
     def batch_mode(self):
         return not self.tty
 
-    def set_expanded_cql_version(self, ver):
-        ver, vertuple = full_cql_version(ver)
-        self.cql_version = ver
-        self.cql_ver_tuple = vertuple
-
-    def cqlver_atleast(self, major, minor=0, patch=0):
-        return self.cql_ver_tuple[:3] >= (major, minor, patch)
+    def set_cql_version(self, ver):
+        v = list(map(int, (ver.split("."))))
+        while (len(v) < 3):
+            v.append(0)
+        self.cql_version = tuple(v)
+        self.cql_version_str = ".".join(map(str, v))
 
     def myformat_value(self, val, cqltype=None, **kwargs):
         if isinstance(val, DecodeError):
@@ -500,12 +503,8 @@ class Shell(cmd.Cmd):
                       self.port))
 
     def show_version(self):
-        vers = self.connection_versions.copy()
-        vers['shver'] = version
-        # system.Versions['cql'] apparently does not reflect changes with
-        # set_cql_version.
-        vers['cql'] = self.cql_version
-        print("[cqlsh %(shver)s | Cassandra %(build)s | CQL spec %(cql)s | Native protocol v%(protocol)s]" % vers)
+        vers = self.connection_versions
+        print(f"[cqlsh {version} | Cassandra {vers['build']} | CQL spec {self.cql_version_str} | Native protocol v{vers['protocol']}]")
 
     def show_session(self, sessionid, partial_session=False):
         print_trace_session(self, self.session, sessionid, partial_session)
@@ -1311,7 +1310,7 @@ class Shell(cmd.Cmd):
 
     def describe_list(self, rows):
         """
-        Print the output for all the DESCRIBE queries for element names (e.g DESCRIBE TABLES, DESCRIBE FUNCTIONS ...)
+        Print the output for all the DESCRIBE queries for element names (e.g. DESCRIBE TABLES, DESCRIBE FUNCTIONS ...)
         """
         keyspace = None
         names = list()
@@ -1338,7 +1337,7 @@ class Shell(cmd.Cmd):
 
     def describe_element(self, rows):
         """
-        Print the output for all the DESCRIBE queries where an element name as been specified (e.g DESCRIBE TABLE, DESCRIBE INDEX ...)
+        Print the output for all the DESCRIBE queries where an element name as been specified (e.g. DESCRIBE TABLE, DESCRIBE INDEX ...)
         """
         for row in rows:
             print('')
@@ -1349,7 +1348,7 @@ class Shell(cmd.Cmd):
         """
         Print the output for a DESCRIBE CLUSTER query.
 
-        If a specified keyspace was in use the returned ResultSet will contains a 'range_ownership' column,
+        If a specified keyspace was in use the returned ResultSet will contain a 'range_ownership' column,
         otherwise not.
         """
         for row in rows:
@@ -1796,6 +1795,9 @@ class Shell(cmd.Cmd):
         pdb.set_trace()
 
     def get_help_topics(self):
+        """
+        List of 'do_' methods having method comments
+        """
         topics = [t[3:] for t in dir(self) if t.startswith('do_') and getattr(self, t, None).__doc__]
         for hide_from_help in ('quit',):
             topics.remove(hide_from_help)
@@ -1816,15 +1818,15 @@ class Shell(cmd.Cmd):
         if not topics:
             shell_topics = [t.upper() for t in self.get_help_topics()]
             self.print_topics("\nDocumented shell commands:", shell_topics, 15, 80)
-            cql_topics = [t.upper() for t in cqldocs.get_help_topics()]
+            cql_topics = [t.upper() for t in get_html_topics()]
             self.print_topics("CQL help topics:", cql_topics, 15, 80)
             return
         for t in topics:
             if t.lower() in self.get_help_topics():
                 doc = getattr(self, 'do_' + t.lower()).__doc__
                 self.stdout.write(doc + "\n")
-            elif t.lower() in cqldocs.get_help_topics():
-                urlpart = cqldocs.get_help_topic(t)
+            elif t.lower() in get_html_topics():
+                urlpart = get_html_anchor(t)
                 if urlpart is not None:
                     url = "%s#%s" % (CASSANDRA_CQL_HTML, urlpart)
                     if self.browser is not None:
@@ -1835,6 +1837,26 @@ class Shell(cmd.Cmd):
                         self.printerr("*** No browser to display CQL help. URL for help topic %s : %s" % (t, url))
             else:
                 self.printerr("*** No help on %s" % (t,))
+
+    def do_history(self, parsed):
+        """
+        HISTORY [cqlsh only]
+
+           Displays the most recent commands executed in cqlsh
+
+        HISTORY (<n>)
+
+           If n is specified, the history display length is set to n for this session
+        """
+
+        history_length = readline.get_current_history_length()
+
+        n = parsed.get_binding('n')
+        if (n is not None):
+            self.max_history_length_shown = int(n)
+
+        for index in range(max(1, history_length - self.max_history_length_shown), history_length):
+            print(readline.get_history_item(index))
 
     def do_unicode(self, parsed):
         """
@@ -1912,6 +1934,24 @@ class Shell(cmd.Cmd):
             self.cov.stop()
             self.cov.save()
             self.cov = None
+
+    def init_history(self):
+        if readline is not None:
+            try:
+                readline.read_history_file(HISTORY)
+            except IOError:
+                pass
+            delims = readline.get_completer_delims()
+            delims.replace("'", "")
+            delims += '.'
+            readline.set_completer_delims(delims)
+
+    def save_history(self):
+        if readline is not None:
+            try:
+                readline.write_history_file(HISTORY)
+            except IOError:
+                pass
 
 
 class SwitchCommand(object):
@@ -2003,8 +2043,7 @@ def should_use_color():
         if int(stdout.strip()) < 8:
             return False
     except (OSError, ImportError, ValueError):
-        # oh well, we tried. at least we know there's a $TERM and it's
-        # not "dumb".
+        # at least it's a $TERM, and it's not "dumb".
         pass
     return True
 
@@ -2025,80 +2064,84 @@ def read_options(cmdlineargs, environment=os.environ):
         print("\nNotice: Credentials in the cqlshrc file is deprecated and will be ignored in the future."
               "\nPlease use a credentials file to specify the username and password.\n", file=sys.stderr)
 
-    optvalues = optparse.Values()
+    argvalues = argparse.Namespace()
 
-    optvalues.username = None
-    optvalues.password = None
-    optvalues.credentials = os.path.expanduser(option_with_default(configs.get, 'authentication', 'credentials',
+    argvalues.username = None
+    argvalues.password = None
+    argvalues.credentials = os.path.expanduser(option_with_default(configs.get, 'authentication', 'credentials',
                                                                    os.path.join(CQL_DIR, 'credentials')))
-    optvalues.keyspace = option_with_default(configs.get, 'authentication', 'keyspace')
-    optvalues.browser = option_with_default(configs.get, 'ui', 'browser', None)
-    optvalues.completekey = option_with_default(configs.get, 'ui', 'completekey',
+    argvalues.keyspace = option_with_default(configs.get, 'authentication', 'keyspace')
+    argvalues.browser = option_with_default(configs.get, 'ui', 'browser', None)
+    argvalues.completekey = option_with_default(configs.get, 'ui', 'completekey',
                                                 DEFAULT_COMPLETEKEY)
-    optvalues.color = option_with_default(configs.getboolean, 'ui', 'color')
-    optvalues.time_format = raw_option_with_default(configs, 'ui', 'time_format',
+    argvalues.color = option_with_default(configs.getboolean, 'ui', 'color')
+    argvalues.time_format = raw_option_with_default(configs, 'ui', 'time_format',
                                                     DEFAULT_TIMESTAMP_FORMAT)
-    optvalues.nanotime_format = raw_option_with_default(configs, 'ui', 'nanotime_format',
+    argvalues.nanotime_format = raw_option_with_default(configs, 'ui', 'nanotime_format',
                                                         DEFAULT_NANOTIME_FORMAT)
-    optvalues.date_format = raw_option_with_default(configs, 'ui', 'date_format',
+    argvalues.date_format = raw_option_with_default(configs, 'ui', 'date_format',
                                                     DEFAULT_DATE_FORMAT)
-    optvalues.float_precision = option_with_default(configs.getint, 'ui', 'float_precision',
+    argvalues.float_precision = option_with_default(configs.getint, 'ui', 'float_precision',
                                                     DEFAULT_FLOAT_PRECISION)
-    optvalues.double_precision = option_with_default(configs.getint, 'ui', 'double_precision',
+    argvalues.double_precision = option_with_default(configs.getint, 'ui', 'double_precision',
                                                      DEFAULT_DOUBLE_PRECISION)
-    optvalues.field_size_limit = option_with_default(configs.getint, 'csv', 'field_size_limit', csv.field_size_limit())
-    optvalues.max_trace_wait = option_with_default(configs.getfloat, 'tracing', 'max_trace_wait',
+    argvalues.max_trace_wait = option_with_default(configs.getfloat, 'tracing', 'max_trace_wait',
                                                    DEFAULT_MAX_TRACE_WAIT)
-    optvalues.timezone = option_with_default(configs.get, 'ui', 'timezone', None)
+    argvalues.timezone = option_with_default(configs.get, 'ui', 'timezone', None)
 
-    optvalues.debug = False
+    argvalues.debug = False
 
-    optvalues.coverage = False
+    argvalues.coverage = False
     if 'CQLSH_COVERAGE' in environment.keys():
-        optvalues.coverage = True
+        argvalues.coverage = True
 
-    optvalues.file = None
-    optvalues.ssl = option_with_default(configs.getboolean, 'connection', 'ssl', DEFAULT_SSL)
-    optvalues.encoding = option_with_default(configs.get, 'ui', 'encoding', UTF8)
+    argvalues.file = None
+    argvalues.ssl = option_with_default(configs.getboolean, 'connection', 'ssl', DEFAULT_SSL)
+    argvalues.encoding = option_with_default(configs.get, 'ui', 'encoding', UTF8)
 
-    optvalues.tty = option_with_default(configs.getboolean, 'ui', 'tty', sys.stdin.isatty())
-    optvalues.protocol_version = option_with_default(configs.getint, 'protocol', 'version', None)
-    optvalues.cqlversion = option_with_default(configs.get, 'cql', 'version', None)
-    optvalues.connect_timeout = option_with_default(configs.getint, 'connection', 'timeout', DEFAULT_CONNECT_TIMEOUT_SECONDS)
-    optvalues.request_timeout = option_with_default(configs.getint, 'connection', 'request_timeout', DEFAULT_REQUEST_TIMEOUT_SECONDS)
-    optvalues.execute = None
-    optvalues.insecure_password_without_warning = False
+    argvalues.tty = option_with_default(configs.getboolean, 'ui', 'tty', sys.stdin.isatty())
+    argvalues.protocol_version = option_with_default(configs.getint, 'protocol', 'version', None)
+    argvalues.cqlversion = option_with_default(configs.get, 'cql', 'version', None)
+    argvalues.connect_timeout = option_with_default(configs.getint, 'connection', 'timeout', DEFAULT_CONNECT_TIMEOUT_SECONDS)
+    argvalues.request_timeout = option_with_default(configs.getint, 'connection', 'request_timeout', DEFAULT_REQUEST_TIMEOUT_SECONDS)
+    argvalues.execute = None
+    argvalues.insecure_password_without_warning = False
 
-    (options, arguments) = parser.parse_args(cmdlineargs, values=optvalues)
+    options, arguments = parser.parse_known_args(cmdlineargs, argvalues)
 
     # Credentials from cqlshrc will be expanded,
     # credentials from the command line are also expanded if there is a space...
     # we need the following so that these two scenarios will work
     #   cqlsh --credentials=~/.cassandra/creds
     #   cqlsh --credentials ~/.cassandra/creds
-    options.credentials = os.path.expanduser(options.credentials)
 
-    if not is_file_secure(options.credentials):
-        print("\nWarning: Credentials file '{0}' exists but is not used, because:"
-              "\n  a. the file owner is not the current user; or"
-              "\n  b. the file is readable by group or other."
-              "\nPlease ensure the file is owned by the current user and is not readable by group or other."
-              "\nOn a Linux or UNIX-like system, you often can do this by using the `chown` and `chmod` commands:"
-              "\n  chown YOUR_USERNAME credentials"
-              "\n  chmod 600 credentials\n".format(options.credentials),
-              file=sys.stderr)
-        options.credentials = ''  # ConfigParser.read() will ignore unreadable files
+    if options.credentials is not None:
+        options.credentials = os.path.expanduser(options.credentials)
+
+    if options.credentials is not None:
+        if not is_file_secure(options.credentials):
+            print("\nWarning: Credentials file '{0}' exists but is not used, because:"
+                  "\n  a. the file owner is not the current user; or"
+                  "\n  b. the file is readable by group or other."
+                  "\nPlease ensure the file is owned by the current user and is not readable by group or other."
+                  "\nOn a Linux or UNIX-like system, you often can do this by using the `chown` and `chmod` commands:"
+                  "\n  chown YOUR_USERNAME credentials"
+                  "\n  chmod 600 credentials\n".format(options.credentials),
+                  file=sys.stderr)
+            options.credentials = ''  # ConfigParser.read() will ignore unreadable files
 
     if not options.username:
         credentials = configparser.ConfigParser()
-        credentials.read(options.credentials)
+        if options.credentials is not None:
+            credentials.read(options.credentials)
 
         # use the username from credentials file but fallback to cqlshrc if username is absent from the command line parameters
         options.username = username_from_cqlshrc
 
     if not options.password:
         rawcredentials = configparser.RawConfigParser()
-        rawcredentials.read(options.credentials)
+        if options.credentials is not None:
+            rawcredentials.read(options.credentials)
 
         # handling password in the same way as username, priority cli > credentials > cqlshrc
         options.password = option_with_default(rawcredentials.get, 'plain_text_auth', 'password', password_from_cqlshrc)
@@ -2107,14 +2150,11 @@ def read_options(cmdlineargs, environment=os.environ):
         print("\nWarning: Using a password on the command line interface can be insecure."
               "\nRecommendation: use the credentials file to securely provide the password.\n", file=sys.stderr)
 
-    # Make sure some user values read from the command line are in unicode
-    options.execute = maybe_ensure_text(options.execute)
-    options.username = maybe_ensure_text(options.username)
-    options.password = maybe_ensure_text(options.password)
-    options.keyspace = maybe_ensure_text(options.keyspace)
-
     hostname = option_with_default(configs.get, 'connection', 'hostname', DEFAULT_HOST)
     port = option_with_default(configs.get, 'connection', 'port', DEFAULT_PORT)
+
+    hostname = environment.get('CQLSH_HOST', hostname)
+    port = environment.get('CQLSH_PORT', port)
 
     try:
         options.connect_timeout = int(options.connect_timeout)
@@ -2128,9 +2168,6 @@ def read_options(cmdlineargs, environment=os.environ):
         parser.error('"%s" is not a valid request timeout.' % (options.request_timeout,))
         options.request_timeout = DEFAULT_REQUEST_TIMEOUT_SECONDS
 
-    hostname = environment.get('CQLSH_HOST', hostname)
-    port = environment.get('CQLSH_PORT', port)
-
     if len(arguments) > 0:
         hostname = arguments[0]
     if len(arguments) > 1:
@@ -2142,19 +2179,13 @@ def read_options(cmdlineargs, environment=os.environ):
     if options.execute and not options.execute.endswith(';'):
         options.execute += ';'
 
-    if optvalues.color in (True, False):
-        options.color = optvalues.color
+    if argvalues.color in (True, False):
+        options.color = argvalues.color
     else:
         if options.file is not None:
             options.color = False
         else:
             options.color = should_use_color()
-
-    if options.cqlversion is not None:
-        options.cqlversion, cqlvertup = full_cql_version(options.cqlversion)
-        if cqlvertup[0] < 3:
-            parser.error('%r is not a supported CQL version.' % options.cqlversion)
-    options.cqlmodule = cql3handling
 
     try:
         port = int(port)
@@ -2163,23 +2194,18 @@ def read_options(cmdlineargs, environment=os.environ):
     return options, hostname, port
 
 
-def setup_cqlruleset(cqlmodule):
+def setup_cqlruleset():
     global cqlruleset
-    cqlruleset = cqlmodule.CqlRuleSet
+    cqlruleset = cql3handling.CqlRuleSet
     cqlruleset.append_rules(cqlshhandling.cqlsh_extra_syntax_rules)
     for rulename, termname, func in cqlshhandling.cqlsh_syntax_completers:
         cqlruleset.completer_for(rulename, termname)(func)
     cqlruleset.commands_end_with_newline.update(cqlshhandling.my_commands_ending_with_newline)
 
 
-def setup_cqldocs(cqlmodule):
-    global cqldocs
-    cqldocs = cqlmodule.cqldocs
-
-
 def setup_docspath(path):
     global CASSANDRA_CQL_HTML
-    CASSANDRA_CQL_HTML_FALLBACK = 'https://cassandra.apache.org/doc/latest/cql/index.html'
+    CASSANDRA_CQL_HTML_FALLBACK = 'https://cassandra.apache.org/doc/latest/cassandra/cql/cql_singlefile.html'
     #
     # default location of local CQL.html
     if os.path.exists(path + '/doc/cql3/CQL.html'):
@@ -2193,33 +2219,13 @@ def setup_docspath(path):
         CASSANDRA_CQL_HTML = CASSANDRA_CQL_HTML_FALLBACK
 
 
-def init_history():
-    if readline is not None:
-        try:
-            readline.read_history_file(HISTORY)
-        except IOError:
-            pass
-        delims = readline.get_completer_delims()
-        delims.replace("'", "")
-        delims += '.'
-        readline.set_completer_delims(delims)
-
-
-def save_history():
-    if readline is not None:
-        try:
-            readline.write_history_file(HISTORY)
-        except IOError:
-            pass
-
-
 def insert_driver_hooks():
 
     class DateOverFlowWarning(RuntimeWarning):
         pass
 
     # Display milliseconds when datetime overflows (CASSANDRA-10625), E.g., the year 10000.
-    # Native datetime types blow up outside of datetime.[MIN|MAX]_YEAR. We will fall back to an int timestamp
+    # Native datetime types blow up outside datetime.[MIN|MAX]_YEAR. We will fall back to an int timestamp
     def deserialize_date_fallback_int(byts, protocol_version):
         timestamp_ms = int64_unpack(byts)
         try:
@@ -2243,10 +2249,7 @@ def main(cmdline, pkgpath):
     (options, hostname, port) = read_options(cmdline)
 
     setup_docspath(pkgpath)
-    setup_cqlruleset(options.cqlmodule)
-    setup_cqldocs(options.cqlmodule)
-    init_history()
-    csv.field_size_limit(options.field_size_limit)
+    setup_cqlruleset()
 
     if options.file is None:
         stdin = None
@@ -2267,22 +2270,39 @@ def main(cmdline, pkgpath):
     # create timezone based on settings, environment or auto-detection
     timezone = None
     if options.timezone or 'TZ' in os.environ:
-        try:
-            import pytz
-            if options.timezone:
-                try:
-                    timezone = pytz.timezone(options.timezone)
-                except Exception:
-                    sys.stderr.write("Warning: could not recognize timezone '%s' specified in cqlshrc\n\n" % (options.timezone))
-            if 'TZ' in os.environ:
-                try:
-                    timezone = pytz.timezone(os.environ['TZ'])
-                except Exception:
-                    sys.stderr.write("Warning: could not recognize timezone '%s' from environment value TZ\n\n" % (os.environ['TZ']))
-        except ImportError:
-            sys.stderr.write("Warning: Timezone defined and 'pytz' module for timezone conversion not installed. Timestamps will be displayed in UTC timezone.\n\n")
+        if sys.version_info >= (3, 9):
+            try:
+                import zoneinfo
+                if options.timezone:
+                    try:
+                        timezone = zoneinfo.ZoneInfo(options.timezone)
+                    except Exception:
+                        sys.stderr.write("Warning: could not recognize timezone '%s' specified in cqlshrc\n\n" % (options.timezone))
+                if 'TZ' in os.environ:
+                    try:
+                        timezone = zoneinfo.ZoneInfo(os.environ['TZ'])
+                    except Exception:
+                        sys.stderr.write("Warning: could not recognize timezone '%s' from environment value TZ\n\n" % (os.environ['TZ']))
+            except ImportError:
+                sys.stderr.write("Warning: Timezone defined but unable to perform timezone conversion using 'zoneinfo' "
+                                 "module. Timestamps will be displayed in UTC timezone.\n\n")
+        else:
+            try:
+                import pytz
+                if options.timezone:
+                    try:
+                        timezone = pytz.timezone(options.timezone)
+                    except Exception:
+                        sys.stderr.write("Warning: could not recognize timezone '%s' specified in cqlshrc\n\n" % (options.timezone))
+                if 'TZ' in os.environ:
+                    try:
+                        timezone = pytz.timezone(os.environ['TZ'])
+                    except Exception:
+                        sys.stderr.write("Warning: could not recognize timezone '%s' from environment value TZ\n\n" % (os.environ['TZ']))
+            except ImportError:
+                sys.stderr.write("Warning: Timezone defined and 'pytz' module for timezone conversion not installed. Timestamps will be displayed in UTC timezone.\n\n")
 
-    # try auto-detect timezone if tzlocal is installed
+    # try to auto-detect timezone if tzlocal is installed
     if not timezone:
         try:
             from tzlocal import get_localzone
@@ -2343,8 +2363,9 @@ def main(cmdline, pkgpath):
 
         signal.signal(signal.SIGHUP, handle_sighup)
 
+    shell.init_history()
     shell.cmdloop()
-    save_history()
+    shell.save_history()
 
     if shell.batch_mode and shell.statement_error:
         sys.exit(2)

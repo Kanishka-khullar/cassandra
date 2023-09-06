@@ -7,6 +7,8 @@ conf/logback.xml etc/cassandra
 conf/logback-tools.xml etc/cassandra
 conf/jvm*.options etc/cassandra
 conf/hotspot_compiler etc/cassandra
+conf/cqlshrc.sample etc/cassandra
+conf/credentials.sample etc/cassandra
 conf/triggers/* etc/cassandra/triggers
 debian/cassandra.conf etc/security/limits.d
 debian/cassandra-sysctl.conf etc/sysctl.d
@@ -29,3 +31,5 @@ tools/bin/sstablepartitions usr/bin
 lib/*.jar usr/share/cassandra/lib
 lib/*.zip usr/share/cassandra/lib
 lib/sigar-bin/* usr/share/cassandra/lib/sigar-bin
+lib/x86_64/* usr/share/cassandra/lib/x86_64
+lib/aarch64/* usr/share/cassandra/lib/aarch64

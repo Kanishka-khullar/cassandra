@@ -156,6 +156,8 @@ K_NOLOGIN:     N O L O G I N;
 K_OPTIONS:     O P T I O N S;
 K_ACCESS:      A C C E S S;
 K_DATACENTERS: D A T A C E N T E R S;
+K_CIDRS:       C I D R S;
+K_IDENTITY:    I D E N T I T Y;
 
 K_CLUSTERING:  C L U S T E R I N G;
 K_ASCII:       A S C I I;
@@ -221,6 +223,8 @@ K_LIKE:        L I K E;
 K_MASKED:      M A S K E D;
 K_UNMASK:      U N M A S K;
 K_SELECT_MASKED: S E L E C T '_' M A S K E D;
+
+K_VECTOR:       V E C T O R;
 
 // Case-insensitive alpha characters
 fragment A: ('a'|'A');

@@ -135,6 +135,7 @@ public class TableStatsHolder implements StatsHolder
         if (table.memtableOffHeapUsed)
             mpTable.put("memtable_off_heap_memory_used", table.memtableOffHeapMemoryUsed);
         mpTable.put("memtable_switch_count", table.memtableSwitchCount);
+        mpTable.put("speculative_retries", table.speculativeRetries);
         mpTable.put("local_read_count", table.localReadCount);
         mpTable.put("local_read_latency_ms", String.format("%01.3f", table.localReadLatencyMs));
         mpTable.put("local_write_count", table.localWriteCount);
@@ -166,7 +167,6 @@ public class TableStatsHolder implements StatsHolder
                     table.averageTombstonesPerSliceLastFiveMinutes);
         mpTable.put("maximum_tombstones_per_slice_last_five_minutes",
                     table.maximumTombstonesPerSliceLastFiveMinutes);
-        mpTable.put("dropped_mutations", table.droppedMutations);
         mpTable.put("droppable_tombstone_ratio",
                     String.format("%01.5f", table.droppableTombstoneRatio));
         mpTable.put("top_size_partitions", table.topSizePartitions);
@@ -330,6 +330,7 @@ public class TableStatsHolder implements StatsHolder
                     statsTable.memtableOffHeapMemoryUsed = format(memtableOffHeapSize, humanReadable);
                 }
                 statsTable.memtableSwitchCount = probe.getColumnFamilyMetric(keyspaceName, tableName, "MemtableSwitchCount");
+                statsTable.speculativeRetries = probe.getColumnFamilyMetric(keyspaceName, tableName, "SpeculativeRetries");
                 statsTable.localReadCount = ((CassandraMetricsRegistry.JmxTimerMBean) probe.getColumnFamilyMetric(keyspaceName, tableName, "ReadLatency")).getCount();
 
                 double localReadLatency = ((CassandraMetricsRegistry.JmxTimerMBean) probe.getColumnFamilyMetric(keyspaceName, tableName, "ReadLatency")).getMean() / 1000;
@@ -376,7 +377,6 @@ public class TableStatsHolder implements StatsHolder
                 histogram = (CassandraMetricsRegistry.JmxHistogramMBean) probe.getColumnFamilyMetric(keyspaceName, tableName, "TombstoneScannedHistogram");
                 statsTable.averageTombstonesPerSliceLastFiveMinutes = histogram.getMean();
                 statsTable.maximumTombstonesPerSliceLastFiveMinutes = histogram.getMax();
-                statsTable.droppedMutations = format((Long) probe.getColumnFamilyMetric(keyspaceName, tableName, "DroppedMutations"), humanReadable);
                 statsTable.droppableTombstoneRatio = probe.getDroppableTombstoneRatio(keyspaceName, tableName);
                 statsTable.topSizePartitions = format(table.getTopSizePartitions(), humanReadable);
                 if (table.getTopSizePartitionsLastUpdate() != null)

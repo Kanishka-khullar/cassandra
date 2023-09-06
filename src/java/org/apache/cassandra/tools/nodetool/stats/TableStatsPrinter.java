@@ -110,6 +110,7 @@ public class TableStatsPrinter<T extends StatsHolder>
             if (table.memtableOffHeapUsed)
                 out.println(indent + "Memtable off heap memory used: " + table.memtableOffHeapMemoryUsed);
             out.println(indent + "Memtable switch count: " + table.memtableSwitchCount);
+            out.println(indent + "Speculative retries: " + table.speculativeRetries);
             out.println(indent + "Local read count: " + table.localReadCount);
             out.printf(indent + "Local read latency: %01.3f ms%n", table.localReadLatencyMs);
             out.println(indent + "Local write count: " + table.localWriteCount);
@@ -142,7 +143,6 @@ public class TableStatsPrinter<T extends StatsHolder>
             out.println(indent + "Maximum live cells per slice (last five minutes): " + table.maximumLiveCellsPerSliceLastFiveMinutes);
             out.println(indent + "Average tombstones per slice (last five minutes): " + table.averageTombstonesPerSliceLastFiveMinutes);
             out.println(indent + "Maximum tombstones per slice (last five minutes): " + table.maximumTombstonesPerSliceLastFiveMinutes);
-            out.println(indent + "Dropped Mutations: " + table.droppedMutations);
             out.printf(indent + "Droppable tombstone ratio: %01.5f%n", table.droppableTombstoneRatio);
             if (table.isInCorrectLocation != null)
                 out.println(indent + "SSTables in correct location: " + table.isInCorrectLocation);

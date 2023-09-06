@@ -427,7 +427,7 @@ public class SSTablePartitions
 
     private static String prettyPrintMemory(long bytes)
     {
-        return FBUtilities.prettyPrintMemory(bytes, true);
+        return FBUtilities.prettyPrintMemory(bytes, " ");
     }
 
     private static ISSTableScanner buildScanner(SSTableReader sstable,
@@ -734,8 +734,8 @@ public class SSTablePartitions
                               notNull(desc.snapshot),
                               notNull(desc.backup),
                               desc.descriptor.id,
-                              desc.descriptor.formatType.name,
-                              desc.descriptor.version.getVersion());
+                              desc.descriptor.version.format.name(),
+                              desc.descriptor.version.version);
         }
     }
 
@@ -779,9 +779,9 @@ public class SSTablePartitions
             return sb.append(" #")
                      .append(descriptor.id)
                      .append(" (")
-                     .append(descriptor.formatType.name)
+                     .append(descriptor.version.format.name())
                      .append('-')
-                     .append(descriptor.version.getVersion())
+                     .append(descriptor.version.version)
                      .append(')')
                      .toString();
         }

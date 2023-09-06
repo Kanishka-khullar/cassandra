@@ -39,7 +39,7 @@ public class TableStatsPrinterTest extends TableStatsTestBase
         "\tTable: %s\n" +
         "\tSSTable count: 60000\n" +
         "\tOld SSTable count: 0\n" +
-        "\tMax SSTable size: 0.000KiB\n" +
+        "\tMax SSTable size: 0B\n" +
         "\tSpace used (live): 0\n" +
         "\tSpace used (total): 9001\n" +
         "\tSpace used by snapshots (total): 1111\n" +
@@ -48,6 +48,7 @@ public class TableStatsPrinterTest extends TableStatsTestBase
         "\tMemtable cell count: 111\n" +
         "\tMemtable data size: 0\n" +
         "\tMemtable switch count: 1\n" +
+        "\tSpeculative retries: 0\n" +
         "\tLocal read count: 0\n" +
         "\tLocal read latency: 2.000 ms\n" +
         "\tLocal write count: 5\n" +
@@ -55,9 +56,9 @@ public class TableStatsPrinterTest extends TableStatsTestBase
         "\tLocal read/write ratio: 0.00000\n" +
         "\tPending flushes: 11111\n" +
         "\tPercent repaired: 100.0\n" +
-        "\tBytes repaired: 0.000KiB\n" +
-        "\tBytes unrepaired: 0.000KiB\n" +
-        "\tBytes pending repair: 0.000KiB\n" +
+        "\tBytes repaired: 0B\n" +
+        "\tBytes unrepaired: 0B\n" +
+        "\tBytes pending repair: 0B\n" +
         "\tBloom filter false positives: 30\n" +
         "\tBloom filter false ratio: 0.40000\n" +
         "\tBloom filter space used: 789\n" +
@@ -68,7 +69,6 @@ public class TableStatsPrinterTest extends TableStatsTestBase
         "\tMaximum live cells per slice (last five minutes): 6\n" +
         "\tAverage tombstones per slice (last five minutes): 5.0\n" +
         "\tMaximum tombstones per slice (last five minutes): 1\n" +
-        "\tDropped Mutations: 0\n" +
         "\tDroppable tombstone ratio: 0.00000\n" +
         "\n";
 
@@ -76,7 +76,7 @@ public class TableStatsPrinterTest extends TableStatsTestBase
         "\tTable: %s\n" +
         "\tSSTable count: 3000\n" +
         "\tOld SSTable count: 0\n" +
-        "\tMax SSTable size: 0.000KiB\n" +
+        "\tMax SSTable size: 0B\n" +
         "\tSpace used (live): 22\n" +
         "\tSpace used (total): 1024\n" +
         "\tSpace used by snapshots (total): 222\n" +
@@ -87,6 +87,7 @@ public class TableStatsPrinterTest extends TableStatsTestBase
         "\tMemtable data size: 900\n" +
         "\tMemtable off heap memory used: 314159265\n" +
         "\tMemtable switch count: 22222\n" +
+        "\tSpeculative retries: 0\n" +
         "\tLocal read count: 1\n" +
         "\tLocal read latency: 3.000 ms\n" +
         "\tLocal write count: 4\n" +
@@ -94,9 +95,9 @@ public class TableStatsPrinterTest extends TableStatsTestBase
         "\tLocal read/write ratio: 0.00000\n" +
         "\tPending flushes: 222222\n" +
         "\tPercent repaired: 99.9\n" +
-        "\tBytes repaired: 0.000KiB\n" +
-        "\tBytes unrepaired: 0.000KiB\n" +
-        "\tBytes pending repair: 0.000KiB\n" +
+        "\tBytes repaired: 0B\n" +
+        "\tBytes unrepaired: 0B\n" +
+        "\tBytes pending repair: 0B\n" +
         "\tBloom filter false positives: 600\n" +
         "\tBloom filter false ratio: 0.01000\n" +
         "\tBloom filter space used: 161718\n" +
@@ -110,7 +111,6 @@ public class TableStatsPrinterTest extends TableStatsTestBase
         "\tMaximum live cells per slice (last five minutes): 5\n" +
         "\tAverage tombstones per slice (last five minutes): 4.001\n" +
         "\tMaximum tombstones per slice (last five minutes): 2\n" +
-        "\tDropped Mutations: 222\n" +
         "\tDroppable tombstone ratio: 0.22222\n" +
         "\n";
 
@@ -118,7 +118,7 @@ public class TableStatsPrinterTest extends TableStatsTestBase
         "\tTable: %s\n" +
         "\tSSTable count: 50000\n" +
         "\tOld SSTable count: 0\n" +
-        "\tMax SSTable size: 0.000KiB\n" +
+        "\tMax SSTable size: 0B\n" +
         "\tSpace used (live): 0\n" +
         "\tSpace used (total): 512\n" +
         "\tSpace used by snapshots (total): 0\n" +
@@ -127,6 +127,7 @@ public class TableStatsPrinterTest extends TableStatsTestBase
         "\tMemtable cell count: 333333\n" +
         "\tMemtable data size: 1999\n" +
         "\tMemtable switch count: 3333\n" +
+        "\tSpeculative retries: 0\n" +
         "\tLocal read count: 2\n" +
         "\tLocal read latency: 4.000 ms\n" +
         "\tLocal write count: 3\n" +
@@ -134,9 +135,9 @@ public class TableStatsPrinterTest extends TableStatsTestBase
         "\tLocal read/write ratio: 0.00000\n" +
         "\tPending flushes: 333\n" +
         "\tPercent repaired: 99.8\n" +
-        "\tBytes repaired: 0.000KiB\n" +
-        "\tBytes unrepaired: 0.000KiB\n" +
-        "\tBytes pending repair: 0.000KiB\n" +
+        "\tBytes repaired: 0B\n" +
+        "\tBytes unrepaired: 0B\n" +
+        "\tBytes pending repair: 0B\n" +
         "\tBloom filter false positives: 20\n" +
         "\tBloom filter false ratio: 0.50000\n" +
         "\tBloom filter space used: 456\n" +
@@ -147,7 +148,6 @@ public class TableStatsPrinterTest extends TableStatsTestBase
         "\tMaximum live cells per slice (last five minutes): 5\n" +
         "\tAverage tombstones per slice (last five minutes): NaN\n" +
         "\tMaximum tombstones per slice (last five minutes): 3\n" +
-        "\tDropped Mutations: 33333\n" +
         "\tDroppable tombstone ratio: 0.33333\n" +
         "\n";
 
@@ -155,7 +155,7 @@ public class TableStatsPrinterTest extends TableStatsTestBase
         "\tTable: %s\n" +
         "\tSSTable count: 2000\n" +
         "\tOld SSTable count: 0\n" +
-        "\tMax SSTable size: 0.000KiB\n" +
+        "\tMax SSTable size: 0B\n" +
         "\tSpace used (live): 4444\n" +
         "\tSpace used (total): 256\n" +
         "\tSpace used by snapshots (total): 44\n" +
@@ -166,6 +166,7 @@ public class TableStatsPrinterTest extends TableStatsTestBase
         "\tMemtable data size: 3000\n" +
         "\tMemtable off heap memory used: 141421356\n" +
         "\tMemtable switch count: 444444\n" +
+        "\tSpeculative retries: 0\n" +
         "\tLocal read count: 3\n" +
         "\tLocal read latency: NaN ms\n" +
         "\tLocal write count: 2\n" +
@@ -173,9 +174,9 @@ public class TableStatsPrinterTest extends TableStatsTestBase
         "\tLocal read/write ratio: 0.00000\n" +
         "\tPending flushes: 4444\n" +
         "\tPercent repaired: 50.0\n" +
-        "\tBytes repaired: 0.000KiB\n" +
-        "\tBytes unrepaired: 0.000KiB\n" +
-        "\tBytes pending repair: 0.000KiB\n" +
+        "\tBytes repaired: 0B\n" +
+        "\tBytes unrepaired: 0B\n" +
+        "\tBytes pending repair: 0B\n" +
         "\tBloom filter false positives: 500\n" +
         "\tBloom filter false ratio: 0.02000\n" +
         "\tBloom filter space used: 131415\n" +
@@ -189,7 +190,6 @@ public class TableStatsPrinterTest extends TableStatsTestBase
         "\tMaximum live cells per slice (last five minutes): 3\n" +
         "\tAverage tombstones per slice (last five minutes): 0.0\n" +
         "\tMaximum tombstones per slice (last five minutes): 3\n" +
-        "\tDropped Mutations: 4444\n" +
         "\tDroppable tombstone ratio: 0.44444\n" +
         "\n";
 
@@ -197,7 +197,7 @@ public class TableStatsPrinterTest extends TableStatsTestBase
         "\tTable: %s\n" +
         "\tSSTable count: 40000\n" +
         "\tOld SSTable count: 0\n" +
-        "\tMax SSTable size: 0.000KiB\n" +
+        "\tMax SSTable size: 0B\n" +
         "\tSpace used (live): 55555\n" +
         "\tSpace used (total): 64\n" +
         "\tSpace used by snapshots (total): 55555\n" +
@@ -206,6 +206,7 @@ public class TableStatsPrinterTest extends TableStatsTestBase
         "\tMemtable cell count: 55555\n" +
         "\tMemtable data size: 20000\n" +
         "\tMemtable switch count: 5\n" +
+        "\tSpeculative retries: 0\n" +
         "\tLocal read count: 4\n" +
         "\tLocal read latency: 0.000 ms\n" +
         "\tLocal write count: 1\n" +
@@ -213,9 +214,9 @@ public class TableStatsPrinterTest extends TableStatsTestBase
         "\tLocal read/write ratio: 0.00000\n" +
         "\tPending flushes: 5\n" +
         "\tPercent repaired: 93.0\n" +
-        "\tBytes repaired: 0.000KiB\n" +
-        "\tBytes unrepaired: 0.000KiB\n" +
-        "\tBytes pending repair: 0.000KiB\n" +
+        "\tBytes repaired: 0B\n" +
+        "\tBytes unrepaired: 0B\n" +
+        "\tBytes pending repair: 0B\n" +
         "\tBloom filter false positives: 10\n" +
         "\tBloom filter false ratio: 0.60000\n" +
         "\tBloom filter space used: 123\n" +
@@ -226,7 +227,6 @@ public class TableStatsPrinterTest extends TableStatsTestBase
         "\tMaximum live cells per slice (last five minutes): 3\n" +
         "\tAverage tombstones per slice (last five minutes): 4.01\n" +
         "\tMaximum tombstones per slice (last five minutes): 5\n" +
-        "\tDropped Mutations: 0\n" +
         "\tDroppable tombstone ratio: 0.55556\n" +
         "\n";
 
@@ -234,7 +234,7 @@ public class TableStatsPrinterTest extends TableStatsTestBase
         "\tTable: %s\n" +
         "\tSSTable count: 1000\n" +
         "\tOld SSTable count: 0\n" +
-        "\tMax SSTable size: 0.000KiB\n" +
+        "\tMax SSTable size: 0B\n" +
         "\tSpace used (live): 666666\n" +
         "\tSpace used (total): 0\n" +
         "\tSpace used by snapshots (total): 0\n" +
@@ -245,6 +245,7 @@ public class TableStatsPrinterTest extends TableStatsTestBase
         "\tMemtable data size: 1000000\n" +
         "\tMemtable off heap memory used: 161803398\n" +
         "\tMemtable switch count: 6\n" +
+        "\tSpeculative retries: 0\n" +
         "\tLocal read count: 5\n" +
         "\tLocal read latency: 1.000 ms\n" +
         "\tLocal write count: 0\n" +
@@ -252,9 +253,9 @@ public class TableStatsPrinterTest extends TableStatsTestBase
         "\tLocal read/write ratio: 0.00000\n" +
         "\tPending flushes: 66\n" +
         "\tPercent repaired: 0.0\n" +
-        "\tBytes repaired: 0.000KiB\n" +
-        "\tBytes unrepaired: 0.000KiB\n" +
-        "\tBytes pending repair: 0.000KiB\n" +
+        "\tBytes repaired: 0B\n" +
+        "\tBytes unrepaired: 0B\n" +
+        "\tBytes pending repair: 0B\n" +
         "\tBloom filter false positives: 400\n" +
         "\tBloom filter false ratio: 0.03000\n" +
         "\tBloom filter space used: 101112\n" +
@@ -268,7 +269,6 @@ public class TableStatsPrinterTest extends TableStatsTestBase
         "\tMaximum live cells per slice (last five minutes): 2\n" +
         "\tAverage tombstones per slice (last five minutes): 6.0\n" +
         "\tMaximum tombstones per slice (last five minutes): 6\n" +
-        "\tDropped Mutations: 666666\n" +
         "\tDroppable tombstone ratio: 0.66667\n" +
         "\n";
 
@@ -418,6 +418,7 @@ public class TableStatsPrinterTest extends TableStatsTestBase
                                  "        \"twcs\" : null,\n" +
                                  "        \"bytes_pending_repair\" : 0,\n" +
                                  "        \"memtable_switch_count\" : 6,\n" +
+                                 "        \"speculative_retries\" : 0,\n" +
                                  "        \"maximum_tombstones_per_slice_last_five_minutes\" : 6,\n" +
                                  "        \"memtable_cell_count\" : 6666,\n" +
                                  "        \"memtable_data_size\" : \"1000000\",\n" +
@@ -430,7 +431,6 @@ public class TableStatsPrinterTest extends TableStatsTestBase
                                  "        \"local_read_count\" : 5,\n" +
                                  "        \"sstable_compression_ratio\" : 0.68,\n" +
                                  "        \"max_sstable_size\" : 0,\n" +
-                                 "        \"dropped_mutations\" : \"666666\",\n" +
                                  "        \"top_size_partitions\" : null,\n" +
                                  "        \"bloom_filter_false_positives\" : 400,\n" +
                                  "        \"off_heap_memory_used_total\" : \"162470810\",\n" +
@@ -487,6 +487,7 @@ public class TableStatsPrinterTest extends TableStatsTestBase
                                  "      twcs: null\n" +
                                  "      bytes_pending_repair: 0\n" +
                                  "      memtable_switch_count: 6\n" +
+                                 "      speculative_retries: 0\n" +
                                  "      maximum_tombstones_per_slice_last_five_minutes: 6\n" +
                                  "      memtable_cell_count: 6666\n" +
                                  "      memtable_data_size: '1000000'\n" +
@@ -499,7 +500,6 @@ public class TableStatsPrinterTest extends TableStatsTestBase
                                  "      local_read_count: 5\n" +
                                  "      sstable_compression_ratio: 0.68\n" +
                                  "      max_sstable_size: 0\n" +
-                                 "      dropped_mutations: '666666'\n" +
                                  "      top_size_partitions: null\n" +
                                  "      bloom_filter_false_positives: 400\n" +
                                  "      off_heap_memory_used_total: '162470810'\n" +

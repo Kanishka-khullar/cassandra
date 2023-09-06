@@ -82,6 +82,7 @@ public class TableStatsTestBase
         template.memtableCellCount = 0L;
         template.memtableDataSize = "0";
         template.memtableSwitchCount = 0L;
+        template.speculativeRetries = 0L;
         template.localReadCount =0L;
         template.localReadLatencyMs = Double.NaN;
         template.localWriteCount = 0L;
@@ -99,7 +100,6 @@ public class TableStatsTestBase
         template.maximumLiveCellsPerSliceLastFiveMinutes = 0L;
         template.averageTombstonesPerSliceLastFiveMinutes = Double.NaN;
         template.maximumTombstonesPerSliceLastFiveMinutes = 0L;
-        template.droppedMutations = "0";
         template.twcs = null;
         template.twcsDurationInMillis = 0L;
         return template;
@@ -171,13 +171,6 @@ public class TableStatsTestBase
         table4.compactedPartitionMinimumBytes = 5L;
         table5.compactedPartitionMinimumBytes = 3L;
         table6.compactedPartitionMinimumBytes = 6L;
-        // dropped mutations: 6 > 3 > 4 > 2 > 1 = 5
-        table1.droppedMutations = "0";
-        table2.droppedMutations = "222";
-        table3.droppedMutations = "33333";
-        table4.droppedMutations = "4444";
-        table5.droppedMutations = "0";
-        table6.droppedMutations = "666666";
         // local reads: 6 > 5 > 4 > 3 > 2 > 1
         table1.localReadCount = 0L;
         table2.localReadCount = 1L;

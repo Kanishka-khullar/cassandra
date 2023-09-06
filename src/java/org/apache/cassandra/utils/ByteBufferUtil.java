@@ -23,7 +23,10 @@ package org.apache.cassandra.utils;
  * afterward, and ensure the tests still pass.
  */
 
-import java.io.*;
+import java.io.DataInput;
+import java.io.EOFException;
+import java.io.IOException;
+import java.io.InputStream;
 import java.net.InetAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
@@ -35,8 +38,8 @@ import java.util.UUID;
 
 import net.nicoulaj.compilecommand.annotations.Inline;
 import org.apache.cassandra.db.TypeSizes;
-import org.apache.cassandra.io.util.DataInputPlus;
 import org.apache.cassandra.io.compress.BufferType;
+import org.apache.cassandra.io.util.DataInputPlus;
 import org.apache.cassandra.io.util.DataOutputPlus;
 import org.apache.cassandra.io.util.FileUtils;
 
@@ -277,6 +280,15 @@ public class ByteBufferUtil
         return clone;
     }
 
+    /**
+     * Transfer bytes from a ByteBuffer to byte array.
+     *
+     * @param src the source ByteBuffer
+     * @param srcPos starting position in the source ByteBuffer
+     * @param dst the destination byte array
+     * @param dstPos starting position in the destination byte array
+     * @param length the number of bytes to copy
+     */
     public static void copyBytes(ByteBuffer src, int srcPos, byte[] dst, int dstPos, int length)
     {
         FastByteOperations.copy(src, srcPos, dst, dstPos, length);
@@ -731,6 +743,8 @@ public class ByteBufferUtil
     // changes bb position
     public static void writeShortLength(ByteBuffer bb, int length)
     {
+        if (length > FBUtilities.MAX_UNSIGNED_SHORT)
+            throw new IllegalArgumentException(String.format("Length %d > max length %d", length, FBUtilities.MAX_UNSIGNED_SHORT));
         bb.put((byte) ((length >> 8) & 0xFF));
         bb.put((byte) (length & 0xFF));
     }
@@ -864,6 +878,26 @@ public class ByteBufferUtil
             if (src.get(sPos++) != prefix.get(pPos++))
                 return false;
         }
+
+        return true;
+    }
+
+    /**
+     * Returns true if the buffer at the current position in the input matches given buffer.
+     * If true, the input is positioned at the end of the consumed buffer.
+     * If false, the position of the input is undefined.
+     * <p>
+     * The matched buffer is unchanged
+     */
+    public static boolean equalsWithShortLength(DataInput in, ByteBuffer toMatch) throws IOException
+    {
+        int length = readShortLength(in);
+        if (length != toMatch.remaining())
+            return false;
+        int limit = toMatch.limit();
+        for (int i = toMatch.position(); i < limit; ++i)
+            if (toMatch.get(i) != in.readByte())
+                return false;
 
         return true;
     }

@@ -63,6 +63,9 @@ import org.apache.cassandra.utils.Isolated;
 
 import static com.google.common.util.concurrent.Uninterruptibles.sleepUninterruptibly;
 import static org.apache.cassandra.config.CassandraRelevantProperties.BOOTSTRAP_SCHEMA_DELAY_MS;
+import static org.apache.cassandra.config.CassandraRelevantProperties.BROADCAST_INTERVAL_MS;
+import static org.apache.cassandra.config.CassandraRelevantProperties.REPLACE_ADDRESS_FIRST_BOOT;
+import static org.apache.cassandra.config.CassandraRelevantProperties.RING_DELAY;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
@@ -255,13 +258,13 @@ public class ClusterUtils
 
         return start(inst, properties -> {
             // lower this so the replacement waits less time
-            properties.setProperty("cassandra.broadcast_interval_ms", Long.toString(TimeUnit.SECONDS.toMillis(30)));
+            properties.set(BROADCAST_INTERVAL_MS, Long.toString(TimeUnit.SECONDS.toMillis(30)));
             // default is 30s, lowering as it should be faster
-            properties.setProperty("cassandra.ring_delay_ms", Long.toString(TimeUnit.SECONDS.toMillis(10)));
+            properties.set(RING_DELAY, Long.toString(TimeUnit.SECONDS.toMillis(10)));
             properties.set(BOOTSTRAP_SCHEMA_DELAY_MS, TimeUnit.SECONDS.toMillis(10));
 
             // state which node to replace
-            properties.setProperty("cassandra.replace_address_first_boot", toReplace.config().broadcastAddress().getAddress().getHostAddress());
+            properties.set(REPLACE_ADDRESS_FIRST_BOOT, toReplace.config().broadcastAddress().getAddress().getHostAddress());
 
             fn.accept(inst, properties);
         });
@@ -430,6 +433,20 @@ public class ClusterUtils
     }
 
     /**
+     * Wait for the ring to have the target instance with the provided status.
+     *
+     * @param instance instance to check on
+     * @param expectedInRing to look for
+     * @param status expected
+     * @return the ring
+     */
+    public static List<RingInstanceDetails> awaitRingStatus(IInstance instance, IInstance expectedInRing, String status)
+    {
+        return awaitInstanceMatching(instance, expectedInRing, d -> d.status.equals(status),
+                                     "Timeout waiting for " + expectedInRing + " to have status " + status);
+    }
+
+    /**
      * Wait for the ring to have the target instance with the provided state.
      *
      * @param instance instance to check on
@@ -439,12 +456,20 @@ public class ClusterUtils
      */
     public static List<RingInstanceDetails> awaitRingState(IInstance instance, IInstance expectedInRing, String state)
     {
-        return awaitRing(instance, "Timeout waiting for " + expectedInRing + " to have state " + state,
-                         ring ->
-                         ring.stream()
-                             .filter(d -> d.address.equals(getBroadcastAddressHostString(expectedInRing)))
-                             .filter(d -> d.state.equals(state))
-                             .findAny().isPresent());
+        return awaitInstanceMatching(instance, expectedInRing, d -> d.state.equals(state),
+                                     "Timeout waiting for " + expectedInRing + " to have state " + state);
+    }
+
+    private static List<RingInstanceDetails> awaitInstanceMatching(IInstance instance,
+                                                                   IInstance expectedInRing,
+                                                                   Predicate<RingInstanceDetails> predicate,
+                                                                   String errorMessage)
+    {
+        return awaitRing(instance,
+                         errorMessage,
+                         ring -> ring.stream()
+                                     .filter(d -> d.address.equals(getBroadcastAddressHostString(expectedInRing)))
+                                     .anyMatch(predicate));
     }
 
     /**

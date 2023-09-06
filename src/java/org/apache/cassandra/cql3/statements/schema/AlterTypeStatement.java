@@ -127,6 +127,12 @@ public abstract class AlterTypeStatement extends AlterSchemaStatement
 
         UserType apply(KeyspaceMetadata keyspace, UserType userType)
         {
+            if (type.isCounter())
+                throw ire("A user type cannot contain counters");
+
+            if (type.isUDT() && !type.isFrozen())
+                throw ire("A user type cannot contain non-frozen UDTs");
+
             if (userType.fieldPosition(fieldName) >= 0)
             {
                 if (!ifFieldNotExists)
@@ -147,6 +153,7 @@ public abstract class AlterTypeStatement extends AlterSchemaStatement
             }
 
             Guardrails.fieldsPerUDT.guard(userType.size() + 1, userType.getNameAsString(), false, state);
+            type.validate(state, "Field " + fieldName);
 
             List<FieldIdentifier> fieldNames = new ArrayList<>(userType.fieldNames()); fieldNames.add(fieldName);
             List<AbstractType<?>> fieldTypes = new ArrayList<>(userType.fieldTypes()); fieldTypes.add(fieldType);
