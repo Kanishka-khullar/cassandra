@@ -380,5 +380,10 @@
       <groupId>org.apache.lucene</groupId>
       <artifactId>lucene-analysis-common</artifactId>
     </dependency>
+    <dependency>
+      <groupId>com.intel.qpl</groupId>
+      <artifactId>qpl-java</artifactId>
+      <version>1.0.0</version>
+    </dependency>
   </dependencies>
 </project>
