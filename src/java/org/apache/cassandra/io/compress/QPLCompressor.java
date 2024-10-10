@@ -93,7 +93,7 @@ public class QPLCompressor implements ICompressor
         };
 
         recommendedUses = ImmutableSet.of(Uses.GENERAL);
-        logger.trace("Creating QPLCompressor with execution path {}  and compression level {} add retry_count {}.", this.executionPath, this.compressionLevel, this.retryCount);
+        logger.info("Creating QPLCompressor with execution path {}  and compression level {} add retry_count {}.", this.executionPath, this.compressionLevel, this.retryCount);
     }
 
     public int uncompress(byte[] input, int inputOffset, int inputLength, byte[] output, int outputOffset) throws IOException
